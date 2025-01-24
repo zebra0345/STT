@@ -1,0 +1,44 @@
+plugins {
+    id 'org.springframework.boot' version '3.1.3'
+    id 'io.spring.dependency-management' version '1.1.3'
+    id 'java'
+}
+
+group = 'org.example'
+version = '1.0-SNAPSHOT'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+repositories {
+    mavenCentral()
+    google()
+    maven {
+        url 'https://maven.google.com'
+    }
+}
+
+dependencies {
+    // Google Cloud Speech-to-Text API 의존성
+    implementation platform('com.google.cloud:libraries-bom:26.33.0')
+
+    // Spring Boot 의존성
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter'
+
+    // Lombok (Optional)
+    compileOnly 'org.projectlombok:lombok:1.18.28'
+    annotationProcessor 'org.projectlombok:lombok:1.18.28'
+
+    // JUnit 의존성
+    testImplementation platform('org.junit:junit-bom:5.10.0')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+
+    implementation 'com.google.cloud:google-cloud-speech'
+}
+
+test {
+    useJUnitPlatform()
+}
