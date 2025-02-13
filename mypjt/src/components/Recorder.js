@@ -1,41 +1,38 @@
 import React, { useState, useRef } from "react";
 
 const Recorder = () => {
-  const [transcript, setTranscript] = useState(""); // 최종 출력 텍스트
+  const [transcript, setTranscript] = useState(""); // 최종 출력 (10글자 유지)
   const [isRecording, setIsRecording] = useState(false); // 녹음 상태
   const [eventSource, setEventSource] = useState(null); // SSE 연결 객체
-  const lastFinalText = useRef(""); // 마지막 최종 처리된 텍스트 (중복 제거용)
-  const buffer = useRef(""); // API에서 수신한 임시 텍스트 버퍼
+  const lastFinalText = useRef(""); // 마지막 확정된 텍스트 (중복 제거용)
+
+  // 🔹 중복 제거 및 최신 10글자 유지 함수
+  const extractNewText = (oldText, newText) => {
+    if (newText.startsWith(oldText)) {
+      return newText.slice(oldText.length); // 중복된 부분 제거
+    }
+    return newText; // 완전히 새로운 텍스트
+  };
 
   // 녹음 시작
   const startRecording = () => {
     if (!isRecording) {
-      const source = new EventSource("http://localhost:8080/api/speech/stream");
+      const source = new EventSource("http://localhost:8080/api/speech/start");
       setEventSource(source);
       setIsRecording(true);
 
-      // SSE 메시지 처리
       source.onmessage = (event) => {
-        const newText = event.data.trim(); // 새로 수신된 텍스트
-        const lastText = lastFinalText.current; // 마지막으로 처리된 텍스트
+        const newText = event.data.trim(); // STT 결과
+        const uniquePart = extractNewText(lastFinalText.current, newText); // 중복 제거
+        lastFinalText.current = newText; // 최신 확정 문장 업데이트
 
-        // 중복 제거: 버퍼에 누적된 텍스트에서 중복된 부분 제거
-        if (newText.startsWith(lastText)) {
-          const uniquePart = newText.slice(lastText.length); // 중복된 부분 이후의 텍스트
-          buffer.current += uniquePart;
-        } else {
-          // 새 텍스트가 중복되지 않은 경우, 버퍼에 추가
-          buffer.current += newText;
-        }
-
-        // 최종 출력 업데이트
-        setTranscript(buffer.current);
-
-        // 최종 텍스트 업데이트
-        lastFinalText.current = newText;
+        // 🔹 새로운 텍스트를 추가하고, 10글자만 유지
+        setTranscript((prev) => {
+          const updatedText = prev + uniquePart; // 누적
+          return updatedText.slice(-10); // 최신 10글자 유지
+        });
       };
 
-      // SSE 에러 처리
       source.onerror = () => {
         console.error("SSE connection error");
         stopRecording();
@@ -50,7 +47,7 @@ const Recorder = () => {
       setEventSource(null);
       setIsRecording(false);
       lastFinalText.current = ""; // 상태 초기화
-      buffer.current = ""; // 버퍼 초기화
+      setTranscript(""); // 화면 표시 초기화
     }
   };
 
@@ -89,16 +86,17 @@ const Recorder = () => {
         </button>
       </div>
       <textarea
-        rows="10"
+        rows="2"
         cols="50"
         value={transcript}
         readOnly
         style={{
           marginTop: "20px",
           width: "80%",
-          height: "300px",
-          fontSize: "16px",
+          height: "50px",
+          fontSize: "20px",
           padding: "10px",
+          textAlign: "center",
         }}
       />
     </div>
